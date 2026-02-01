@@ -18,7 +18,7 @@
   },
   "scripts": {
     "prebuild": "node scripts/prebuild.js",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
   "start": "serve -s build -l $PORT",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -41,7 +41,7 @@
     ]
   },
   "engines": {
-    "node": ">=16.0.0",
+    "node": ">=20.x",
     "npm": ">=7.0.0"
   },
   "rewrites": [
