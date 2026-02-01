@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: adscreativeflow
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_TIKTOK_CLIENT_KEY
+        sync: false
+      - key: REACT_APP_TIKTOK_CLIENT_SECRET
+        sync: false
+      - key: REACT_APP_TIKTOK_REDIRECT_URI
+        value: https://adscreativeflow.onrender.com/auth/callback
+      - key: REACT_APP_API_BASE_URL
+        value: https://business-api.tiktok.com
+      - key: REACT_APP_OPEN_API_URL
+        value: https://open-api.tiktok.com
+    healthCheckPath: /api/health
+    autoDeploy: true
+    domains:
+      - adscreativeflow.onrender.com
