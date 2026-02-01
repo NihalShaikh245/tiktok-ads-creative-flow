@@ -121,5 +121,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`✅ TikTok Redirect URI: ${process.env.REACT_APP_TIKTOK_REDIRECT_URI}`);
 });

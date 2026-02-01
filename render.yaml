@@ -2,7 +2,7 @@ services:
   - type: web
     name: adscreativeflow
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
@@ -20,5 +20,5 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     domains:
-  - adscreativeflow.onrender.com
-  - adscreativeflow.com  # If you have custom domain
+      - adscreativeflow.onrender.com
+      - adscreativeflow.com  # If you have custom domain
