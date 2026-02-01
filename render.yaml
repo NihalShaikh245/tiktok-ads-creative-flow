@@ -20,4 +20,5 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     domains:
-      - adscreativeflow.onrender.com
+  - adscreativeflow.onrender.com
+  - adscreativeflow.com  # If you have custom domain
