@@ -5,6 +5,8 @@ import AuthCallback from './components/AuthCallback';
 import AdCreationForm from './components/AdCreationForm';
 import ErrorDisplay from './components/ErrorDisplay';
 import SubmissionSuccess from './components/SubmissionSuccess';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import tiktokAuth from './services/tiktokAuth';
 import { errorHandler } from './utils/errorHandlers';
 import './App.css';
@@ -16,26 +18,23 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [adCreationSuccess, setAdCreationSuccess] = useState(null);
   const [globalError, setGlobalError] = useState(null);
-  
+
   const location = useLocation();
-  
-  // Register global error handler
+
+  // ----- Global Error Handler -----
   useEffect(() => {
     errorHandler.onError((error, context) => {
       console.log('Global error handler triggered:', error, context);
       setGlobalError(error);
     });
 
-    // Clear old error logs weekly
     errorHandler.clearOldErrorLogs(7);
 
-    // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
       console.error('Unhandled promise rejection:', event.reason);
       errorHandler.handleError(event.reason, { source: 'unhandled_promise' });
     });
 
-    // Handle window errors
     window.addEventListener('error', (event) => {
       console.error('Window error:', event.error);
       errorHandler.handleError(event.error, { source: 'window_error' });
@@ -47,7 +46,7 @@ function App() {
     };
   }, []);
 
-  // Check for existing valid token on app load
+  // ----- Check Existing Token -----
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
@@ -63,11 +62,10 @@ function App() {
         setLoading(false);
       }
     };
-
     checkExistingAuth();
   }, []);
 
-  // Check for success query parameter
+  // ----- Check for last submission via URL query -----
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('success') === 'true') {
@@ -82,6 +80,7 @@ function App() {
     }
   }, [location]);
 
+  // ----- Handlers -----
   const handleOAuthSuccess = useCallback((token) => {
     setAccessToken(token);
     setError(null);
@@ -92,7 +91,6 @@ function App() {
     const errorObj = typeof errorMessage === 'string' 
       ? new Error(errorMessage) 
       : errorMessage;
-    
     setError(errorObj);
     errorHandler.handleError(errorObj, { source: 'ui_error' });
   }, []);
@@ -104,7 +102,6 @@ function App() {
       submittedAt: new Date().toISOString(),
       estimatedReviewTime: '1-24 hours'
     };
-    
     localStorage.setItem('last_ad_submission', JSON.stringify(submissionData));
     setAdCreationSuccess(submissionData);
     setError(null);
@@ -154,7 +151,7 @@ function App() {
           )}
         </div>
       </header>
-      
+
       <main className="App-main">
         {/* Global Error Display */}
         {globalError && (
@@ -174,72 +171,75 @@ function App() {
           />
         )}
 
-        {/* Success State */}
-        {adCreationSuccess ? (
-          <SubmissionSuccess
-            submissionData={adCreationSuccess}
-            onCreateAnother={clearSuccess}
-          />
-        ) : (
-          <Routes>
-            <Route path="/" element={
-              <div className="container">
-                {!accessToken ? (
-                  <div className="auth-section">
-                    <h2>Connect Your TikTok Ads Account</h2>
-                    <p className="section-description">
-                      Connect your TikTok account to create ads. This requires OAuth authorization.
-                    </p>
-                    <OAuthButton 
-                      onSuccess={handleOAuthSuccess}
-                      onError={handleError}
-                    />
-                    
-                    <div className="oauth-requirements">
-                      <h4>Requirements:</h4>
-                      <ul>
-                        <li>A TikTok account with Ads access</li>
-                        <li>TikTok Developer App with OAuth configured</li>
-                        <li>Required scopes: user.info.basic, advertising.music</li>
-                      </ul>
-                    </div>
+        <Routes>
+          {/* Home Route */}
+          <Route path="/" element={
+            <div className="container">
+              {!accessToken ? (
+                <div className="auth-section">
+                  <h2>Connect Your TikTok Ads Account</h2>
+                  <p className="section-description">
+                    Connect your TikTok account to create ads. This requires OAuth authorization.
+                  </p>
+                  <OAuthButton 
+                    onSuccess={handleOAuthSuccess}
+                    onError={handleError}
+                  />
+                  <div className="oauth-requirements">
+                    <h4>Requirements:</h4>
+                    <ul>
+                      <li>A TikTok account with Ads access</li>
+                      <li>TikTok Developer App with OAuth configured</li>
+                      <li>Required scopes: user.info.basic, advertising.music</li>
+                    </ul>
                   </div>
-                ) : (
-                  <div className="ad-creation-section">
-                    <div className="connection-status">
-                      <div className="status-indicator connected"></div>
-                      <span>TikTok Account Connected</span>
-                    </div>
-                    <h2>Create New Ad Creative</h2>
-                    <AdCreationForm 
-                      accessToken={accessToken}
-                      onError={handleError}
-                      onSuccess={handleAdCreationSuccess}
-                    />
+                </div>
+              ) : adCreationSuccess ? (
+                <SubmissionSuccess
+                  submissionData={adCreationSuccess}
+                  onCreateAnother={clearSuccess}
+                />
+              ) : (
+                <div className="ad-creation-section">
+                  <div className="connection-status">
+                    <div className="status-indicator connected"></div>
+                    <span>TikTok Account Connected</span>
                   </div>
-                )}
-              </div>
-            } />
-            
-            <Route path="/auth/callback" element={
-              <AuthCallback 
-                onSuccess={handleOAuthSuccess}
-                onError={handleError}
-              />
-            } />
-          </Routes>
-        )}
+                  <h2>Create New Ad Creative</h2>
+                  <AdCreationForm 
+                    accessToken={accessToken}
+                    onError={handleError}
+                    onSuccess={handleAdCreationSuccess}
+                  />
+                </div>
+              )}
+            </div>
+          } />
+
+          {/* OAuth Callback */}
+          <Route path="/auth/callback" element={
+            <AuthCallback 
+              onSuccess={handleOAuthSuccess}
+              onError={handleError}
+            />
+          } />
+
+          {/* Terms & Privacy */}
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+        </Routes>
       </main>
-      
+
       <footer className="App-footer">
         <p>TikTok Ads Creative Flow - Frontend Assignment</p>
         <p className="footer-note">
           Note: This application uses real TikTok OAuth and requires a configured TikTok Developer App.
         </p>
-        <p className="footer-status">
-          {accessToken ? 'Status: Connected' : 'Status: Disconnected'}
-          {globalError && ' • Error detected'}
-        </p>
+        <div className="footer-links">
+          <a href="/terms" className="footer-link">Terms of Service</a>
+          <span className="footer-separator">•</span>
+          <a href="/privacy" className="footer-link">Privacy Policy</a>
+        </div>
       </footer>
     </div>
   );

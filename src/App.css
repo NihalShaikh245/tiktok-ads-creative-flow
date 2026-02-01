@@ -675,3 +675,28 @@
     gap: 8px;
   }
 }
+
+.footer-links {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.9em;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.footer-separator {
+  color: #999;
+  font-size: 0.8em;
+}
