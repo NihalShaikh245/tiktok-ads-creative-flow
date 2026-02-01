@@ -387,3 +387,291 @@
     margin-bottom: 8px;
   }
 }
+
+/* Music selection specific styles */
+.music-option-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.music-option-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.music-option-card.selected {
+  border-color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+.music-validation-status {
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.music-validation-status.valid {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+}
+
+.music-validation-status.invalid {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+}
+
+.music-validation-status.pending {
+  background-color: #fff3e0;
+  border-left: 4px solid #ff9800;
+}
+
+.music-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.music-detail-item {
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.music-detail-label {
+  font-size: 0.75rem;
+  color: #666;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.music-detail-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Search results styles */
+.search-results-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.search-result-item {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-result-item:hover {
+  background-color: #f5f5f5;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-info {
+  flex: 1;
+}
+
+.search-result-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Upload progress styles */
+.upload-progress-container {
+  margin-top: 16px;
+}
+
+.upload-progress-bar {
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background-color: #4caf50;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.upload-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* File upload area styles */
+.file-upload-area {
+  border: 3px dashed #bdbdbd;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+}
+
+.file-upload-area:hover {
+  border-color: #1976d2;
+  background-color: #f0f7ff;
+}
+
+.file-upload-area.drag-over {
+  border-color: #4caf50;
+  background-color: #e8f5e9;
+}
+
+.file-upload-icon {
+  font-size: 48px;
+  color: #757575;
+  margin-bottom: 16px;
+}
+
+.file-upload-text {
+  color: #424242;
+  margin-bottom: 8px;
+}
+
+.file-upload-hint {
+  color: #9e9e9e;
+  font-size: 0.875rem;
+}
+
+/* Music option requirements */
+.requirements-list {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.requirements-list li {
+  margin-bottom: 4px;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+/* Objective rules highlight */
+.objective-rules-highlight {
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 16px;
+}
+
+.objective-rules-title {
+  color: #1976d2;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Music selection summary */
+.music-summary-card {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.music-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.music-summary-title {
+  font-weight: 600;
+  color: #495057;
+}
+
+.music-summary-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.valid {
+  background-color: #28a745;
+}
+
+.status-dot.pending {
+  background-color: #ffc107;
+}
+
+.status-dot.invalid {
+  background-color: #dc3545;
+}
+
+/* Responsive adjustments for music components */
+@media (max-width: 768px) {
+  .music-details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .search-result-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .search-result-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .file-upload-area {
+    padding: 30px 15px;
+  }
+  
+  .file-upload-icon {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .music-validation-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .music-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
