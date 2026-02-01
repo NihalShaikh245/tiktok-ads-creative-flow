@@ -1,27 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TextField from '@mui/material/TextField';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import SubmissionError from './SubmissionError';
+import SubmissionSuccess from './SubmissionSuccess';
 import MusicSelection from './MusicSelection';
+import adSubmissionService from '../services/adSubmissionService';
 import tiktokApi from '../services/tiktokApi';
+import validationService from '../services/validationService';
 import { 
   validateCampaignName, 
   validateAdText 
 } from '../utils/helpers';
 import { AD_OBJECTIVES, CTA_OPTIONS } from '../utils/constants';
 
-const AdCreationForm = ({ accessToken, onError }) => {
+// Import form components
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+
+const AdCreationForm = ({ accessToken, onError, onSuccess }) => {
   const navigate = useNavigate();
   
-  // Form state
+  // Form states
   const [formData, setFormData] = useState({
     campaignName: '',
     objective: AD_OBJECTIVES.TRAFFIC,
@@ -37,18 +43,17 @@ const AdCreationForm = ({ accessToken, onError }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [advertiserInfo, setAdvertiserInfo] = useState(null);
+  const [submissionResult, setSubmissionResult] = useState(null);
+  const [submissionError, setSubmissionError] = useState(null);
+  const [fieldTouched, setFieldTouched] = useState({});
 
-  // Fetch advertiser info on component mount
+  // Fetch advertiser info
   useEffect(() => {
     const fetchAdvertiserInfo = async () => {
       try {
         setLoading(true);
-        // Note: This would require additional API calls to get advertiser info
-        // For now, we'll simulate with a placeholder
-        setAdvertiserInfo({
-          advertiser_id: '123456789',
-          advertiser_name: 'Demo Advertiser'
-        });
+        const info = await tiktokApi.getAdvertiserInfo();
+        setAdvertiserInfo(info);
       } catch (error) {
         console.error('Failed to fetch advertiser info:', error);
         onError(error.message);
@@ -62,7 +67,7 @@ const AdCreationForm = ({ accessToken, onError }) => {
     }
   }, [accessToken, onError]);
 
-  // Handle input changes
+  // Handle input changes with validation
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
@@ -71,13 +76,51 @@ const AdCreationForm = ({ accessToken, onError }) => {
       [name]: value
     }));
 
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+    // Mark field as touched
+    setFieldTouched(prev => ({
+      ...prev,
+      [name]: true
+    }));
+
+    // Validate immediately
+    validateField(name, value);
+  };
+
+  // Validate a single field
+  const validateField = (name, value) => {
+    let error = '';
+    
+    switch (name) {
+      case 'campaignName':
+        error = validateCampaignName(value);
+        break;
+      case 'adText':
+        error = validateAdText(value);
+        break;
+      case 'objective':
+        if (!value) error = 'Please select an objective';
+        break;
+      case 'cta':
+        if (!value) error = 'Please select a call to action';
+        break;
+      case 'musicId':
+        if (formData.musicOption === 'existing' && !value) {
+          error = 'Music ID is required';
+        }
+        break;
+      case 'customMusicName':
+        if (formData.musicOption === 'upload' && !value) {
+          error = 'Music name is required';
+        }
+        break;
     }
+
+    setErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+
+    return !error;
   };
 
   // Handle music selection changes
@@ -86,116 +129,122 @@ const AdCreationForm = ({ accessToken, onError }) => {
       ...prev,
       ...musicData
     }));
+
+    // Clear music-related errors
+    setErrors(prev => ({
+      ...prev,
+      musicOption: '',
+      musicId: '',
+      customMusicName: ''
+    }));
   };
 
-  // Validate form
+  // Validate entire form
   const validateForm = () => {
     const newErrors = {};
+    let isValid = true;
 
-    // Campaign name validation
-    const campaignNameError = validateCampaignName(formData.campaignName);
-    if (campaignNameError) newErrors.campaignName = campaignNameError;
+    // Validate each field
+    Object.keys(formData).forEach(field => {
+      if (field !== 'customMusicFile') { // Skip file validation
+        const isFieldValid = validateField(field, formData[field]);
+        if (!isFieldValid) {
+          isValid = false;
+        }
+      }
+    });
 
-    // Ad text validation
-    const adTextError = validateAdText(formData.adText);
-    if (adTextError) newErrors.adText = adTextError;
-
-    // Objective validation
-    if (!formData.objective) {
-      newErrors.objective = 'Please select an objective';
-    }
-
-    // CTA validation
-    if (!formData.cta) {
-      newErrors.cta = 'Please select a call to action';
-    }
-
-    // Music validation based on option
-    if (formData.musicOption === 'existing' && !formData.musicId) {
-      newErrors.musicId = 'Music ID is required';
-    }
-
-    // Objective-specific music validation
+    // Additional validation for music based on objective
     if (formData.objective === AD_OBJECTIVES.CONVERSIONS && formData.musicOption === 'none') {
       newErrors.musicOption = 'Music is required for Conversions objective';
+      isValid = false;
     }
 
-    return newErrors;
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return isValid;
   };
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Mark all fields as touched
+    const allFields = Object.keys(formData);
+    const touchedState = {};
+    allFields.forEach(field => {
+      touchedState[field] = true;
+    });
+    setFieldTouched(touchedState);
+
     // Validate form
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
+    if (!validateForm()) {
+      onError('Please fix the errors in the form before submitting.');
       return;
     }
 
     try {
       setSubmitting(true);
-      
-      // Prepare ad data
-      const adData = {
-        advertiser_id: advertiserInfo?.advertiser_id,
-        campaign_name: formData.campaignName.trim(),
+      setSubmissionError(null);
+
+      console.log('Submitting ad with data:', formData);
+
+      // Submit ad
+      const result = await adSubmissionService.submitAd(formData, advertiserInfo?.advertiser_id);
+
+      // Create submission result
+      const submissionData = {
+        adId: result.ad_id || `AD_${Date.now()}`,
+        campaignName: formData.campaignName,
         objective: formData.objective,
-        ad_text: formData.adText.trim(),
-        call_to_action: formData.cta,
-        music_info: null
+        submittedAt: new Date().toISOString(),
+        estimatedReviewTime: '1-24 hours'
       };
 
-      // Add music info based on selection
-      if (formData.musicOption === 'existing' && formData.musicId) {
-        // Validate music ID with TikTok API
-        const musicInfo = await tiktokApi.getMusicInfo(formData.musicId);
-        adData.music_info = {
-          music_id: formData.musicId,
-          music_title: musicInfo.title,
-          music_author: musicInfo.author
-        };
-      } else if (formData.musicOption === 'upload' && formData.customMusicName) {
-        // For uploaded music, we would typically get an ID from upload API
-        // For this assignment, we'll simulate it
-        adData.music_info = {
-          music_id: `custom_${Date.now()}`,
-          music_title: formData.customMusicName,
-          music_author: 'Custom Upload'
-        };
-      }
-      // If no music and objective is TRAFFIC, that's valid
+      setSubmissionResult(submissionData);
 
-      // Submit ad to TikTok API
-      const result = await tiktokApi.createAd(adData);
-      
-      // Show success message
-      alert(`✅ Ad created successfully!\nAd ID: ${result.ad_id}`);
-      
-      // Reset form
-      setFormData({
-        campaignName: '',
-        objective: AD_OBJECTIVES.TRAFFIC,
-        adText: '',
-        cta: CTA_OPTIONS[0].value,
-        musicOption: 'existing',
-        musicId: '',
-        customMusicFile: null,
-        customMusicName: ''
-      });
-      
-      // Navigate to success page or refresh
-      navigate('/?success=true');
+      // Notify parent
+      if (onSuccess) {
+        onSuccess(submissionData.campaignName, submissionData.adId);
+      }
+
+      // Reset form after successful submission
+      setTimeout(() => {
+        setFormData({
+          campaignName: '',
+          objective: AD_OBJECTIVES.TRAFFIC,
+          adText: '',
+          cta: CTA_OPTIONS[0].value,
+          musicOption: 'existing',
+          musicId: '',
+          customMusicFile: null,
+          customMusicName: ''
+        });
+        setErrors({});
+        setFieldTouched({});
+      }, 1000);
 
     } catch (error) {
-      console.error('Failed to create ad:', error);
+      console.error('Ad submission failed:', error);
+      setSubmissionError(error);
       onError(error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Handle retry submission
+  const handleRetry = () => {
+    setSubmissionError(null);
+    handleSubmit(new Event('submit'));
+  };
+
+  // Handle create another ad
+  const handleCreateAnother = () => {
+    setSubmissionResult(null);
+    setSubmissionError(null);
+  };
+
+  // Show loading state
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -204,24 +253,41 @@ const AdCreationForm = ({ accessToken, onError }) => {
     );
   }
 
-  return (
-    <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-      <form onSubmit={handleSubmit}>
-        {/* Advertiser Info */}
-        {advertiserInfo && (
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Advertiser Account
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {advertiserInfo.advertiser_name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              ID: {advertiserInfo.advertiser_id}
-            </Typography>
-          </Box>
-        )}
+  // Show success state
+  if (submissionResult) {
+    return (
+      <SubmissionSuccess
+        submissionData={submissionResult}
+        onCreateAnother={handleCreateAnother}
+      />
+    );
+  }
 
+  return (
+    <Paper elevation={3} sx={{ p: 4, borderRadius: 2, position: 'relative' }}>
+      {/* Submission Error Display */}
+      {submissionError && (
+        <SubmissionError
+          error={submissionError}
+          onRetry={handleRetry}
+          onClose={() => setSubmissionError(null)}
+          formData={formData}
+        />
+      )}
+
+      {/* Form Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" gutterBottom fontWeight="medium">
+          Create New Ad Creative
+        </Typography>
+        {advertiserInfo && (
+          <Typography variant="body2" color="text.secondary">
+            Advertiser: <strong>{advertiserInfo.advertiser_name}</strong>
+          </Typography>
+        )}
+      </Box>
+
+      <form onSubmit={handleSubmit}>
         {/* Campaign Name */}
         <TextField
           fullWidth
@@ -229,56 +295,90 @@ const AdCreationForm = ({ accessToken, onError }) => {
           name="campaignName"
           value={formData.campaignName}
           onChange={handleInputChange}
-          error={!!errors.campaignName}
-          helperText={errors.campaignName || "Minimum 3 characters"}
+          error={!!errors.campaignName && fieldTouched.campaignName}
+          helperText={
+            errors.campaignName && fieldTouched.campaignName 
+              ? errors.campaignName 
+              : "Minimum 3 characters"
+          }
           margin="normal"
           required
           disabled={submitting}
+          onBlur={() => setFieldTouched(prev => ({ ...prev, campaignName: true }))}
         />
 
         {/* Objective */}
-        <FormControl fullWidth margin="normal" error={!!errors.objective} disabled={submitting}>
+        <FormControl 
+          fullWidth 
+          margin="normal" 
+          error={!!errors.objective && fieldTouched.objective}
+          disabled={submitting}
+        >
           <InputLabel>Objective *</InputLabel>
           <Select
             name="objective"
             value={formData.objective}
             onChange={handleInputChange}
             label="Objective *"
+            onBlur={() => setFieldTouched(prev => ({ ...prev, objective: true }))}
           >
             <MenuItem value={AD_OBJECTIVES.TRAFFIC}>Traffic</MenuItem>
             <MenuItem value={AD_OBJECTIVES.CONVERSIONS}>Conversions</MenuItem>
           </Select>
-          {errors.objective && (
-            <Typography variant="caption" color="error">
+          {errors.objective && fieldTouched.objective && (
+            <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
               {errors.objective}
             </Typography>
           )}
         </FormControl>
 
-        {/* Ad Text */}
-        <TextField
-          fullWidth
-          label="Ad Text"
-          name="adText"
-          value={formData.adText}
-          onChange={handleInputChange}
-          error={!!errors.adText}
-          helperText={errors.adText || `Max 100 characters (${formData.adText.length}/100)`}
-          margin="normal"
-          multiline
-          rows={3}
-          required
-          disabled={submitting}
-        />
+        {/* Ad Text with character counter */}
+        <Box sx={{ mt: 2, mb: 1 }}>
+          <TextField
+            fullWidth
+            label="Ad Text"
+            name="adText"
+            value={formData.adText}
+            onChange={handleInputChange}
+            error={!!errors.adText && fieldTouched.adText}
+            helperText={
+              errors.adText && fieldTouched.adText 
+                ? errors.adText 
+                : `${formData.adText.length}/100 characters`
+            }
+            multiline
+            rows={3}
+            required
+            disabled={submitting}
+            onBlur={() => setFieldTouched(prev => ({ ...prev, adText: true }))}
+          />
+          <Typography 
+            variant="caption" 
+            align="right" 
+            sx={{ 
+              display: 'block',
+              mt: 0.5,
+              color: formData.adText.length > 100 ? 'error.main' : 'text.secondary'
+            }}
+          >
+            {100 - formData.adText.length} characters remaining
+          </Typography>
+        </Box>
 
         {/* Call to Action */}
-        <FormControl fullWidth margin="normal" error={!!errors.cta} disabled={submitting}>
+        <FormControl 
+          fullWidth 
+          margin="normal" 
+          error={!!errors.cta && fieldTouched.cta}
+          disabled={submitting}
+        >
           <InputLabel>Call to Action (CTA) *</InputLabel>
           <Select
             name="cta"
             value={formData.cta}
             onChange={handleInputChange}
             label="Call to Action (CTA) *"
+            onBlur={() => setFieldTouched(prev => ({ ...prev, cta: true }))}
           >
             {CTA_OPTIONS.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -286,8 +386,8 @@ const AdCreationForm = ({ accessToken, onError }) => {
               </MenuItem>
             ))}
           </Select>
-          {errors.cta && (
-            <Typography variant="caption" color="error">
+          {errors.cta && fieldTouched.cta && (
+            <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
               {errors.cta}
             </Typography>
           )}
@@ -303,20 +403,47 @@ const AdCreationForm = ({ accessToken, onError }) => {
           onError={onError}
         />
 
+        {/* Form Submission Summary */}
+        {Object.keys(fieldTouched).length > 0 && (
+          <Alert 
+            severity={Object.keys(errors).filter(k => errors[k]).length > 0 ? "warning" : "info"}
+            sx={{ mt: 3 }}
+          >
+            <Typography variant="body2">
+              {Object.keys(errors).filter(k => errors[k]).length > 0
+                ? `Please fix ${Object.keys(errors).filter(k => errors[k]).length} error(s) before submitting.`
+                : 'All required fields are filled. Ready to submit.'
+              }
+            </Typography>
+          </Alert>
+        )}
+
         {/* Submit Button */}
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ 
+          mt: 4, 
+          pt: 3, 
+          borderTop: 1, 
+          borderColor: 'divider',
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="caption" color="text.secondary">
+            * Required fields
+          </Typography>
+          
           <Button
             type="submit"
             variant="contained"
             color="primary"
             size="large"
             disabled={submitting}
-            sx={{ minWidth: 120 }}
+            sx={{ minWidth: 150 }}
           >
             {submitting ? (
               <>
                 <CircularProgress size={20} sx={{ mr: 1 }} />
-                Creating...
+                Submitting...
               </>
             ) : (
               'Create Ad'
@@ -324,6 +451,31 @@ const AdCreationForm = ({ accessToken, onError }) => {
           </Button>
         </Box>
       </form>
+
+      {/* Submission Progress Indicator */}
+      {submitting && (
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgcolor: 'rgba(255, 255, 255, 0.8)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 2
+        }}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Creating your ad...
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This may take a few moments
+          </Typography>
+        </Box>
+      )}
     </Paper>
   );
 };
