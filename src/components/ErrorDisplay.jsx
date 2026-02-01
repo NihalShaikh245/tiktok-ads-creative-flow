@@ -5,41 +5,53 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import Collapse from '@mui/material/Collapse';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 
-const ErrorDisplay = ({ message, onClose, severity = 'error', details }) => {
+const ErrorDisplay = ({
+  message,
+  onClose,
+  severity = 'error',
+  details
+}) => {
   const [open, setOpen] = React.useState(true);
+
+  // Normalize message (supports string, Error, null)
+  const rawMessage =
+    typeof message === 'string'
+      ? message
+      : message?.message || 'An unexpected error occurred';
+
+  const normalizedMessage = rawMessage.toLowerCase();
 
   const handleClose = () => {
     setOpen(false);
-    if (onClose) {
-      onClose();
-    }
+    onClose?.();
   };
 
-  // Map form-specific error messages
+  // Map API / form-specific errors to user-friendly messages
   const getFormErrorMessage = (msg) => {
     if (msg.includes('campaign_name')) {
-      return 'Invalid campaign name. Please check the requirements.';
+      return 'Invalid campaign name. Please check the naming requirements.';
     }
     if (msg.includes('ad_text')) {
       return 'Ad text validation failed. Maximum 100 characters allowed.';
     }
     if (msg.includes('music_id')) {
-      return 'Invalid music ID or music not available for advertising.';
+      return 'Invalid music ID or the music is not approved for advertising.';
     }
     if (msg.includes('objective')) {
       return 'Invalid objective selected. Please choose Traffic or Conversions.';
     }
     if (msg.includes('advertiser_id')) {
-      return 'Advertiser account issue. Please reconnect your TikTok account.';
+      return 'Advertiser account issue. Please reconnect your TikTok Ads account.';
     }
-    if (msg.includes('permission')) {
-      return 'Insufficient permissions to create ads. Please check your account settings.';
+    if (msg.includes('permission') || msg.includes('scope')) {
+      return 'Insufficient permissions to create ads. Please check your account access.';
     }
-    return msg;
+    return rawMessage;
   };
 
-  const friendlyMessage = getFormErrorMessage(message);
+  const friendlyMessage = getFormErrorMessage(normalizedMessage);
 
   return (
     <Collapse in={open}>
@@ -57,37 +69,51 @@ const ErrorDisplay = ({ message, onClose, severity = 'error', details }) => {
         }
         sx={{
           mb: 3,
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          borderRadius: 2,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
           alignItems: 'flex-start'
         }}
       >
         <AlertTitle sx={{ m: 0 }}>
-          {severity === 'error' ? 'Submission Failed' : 
-           severity === 'warning' ? 'Warning' : 'Information'}
+          {severity === 'error'
+            ? 'Submission Failed'
+            : severity === 'warning'
+            ? 'Warning'
+            : 'Information'}
         </AlertTitle>
-        
+
         <Typography variant="body2" sx={{ mt: 1 }}>
           {friendlyMessage}
         </Typography>
-        
+
         {details && (
-          <Box sx={{ mt: 2, p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
+          <Box
+            sx={{
+              mt: 2,
+              p: 1,
+              bgcolor: 'background.default',
+              borderRadius: 1
+            }}
+          >
             <Typography variant="caption" component="div">
               <strong>Details:</strong> {details}
             </Typography>
           </Box>
         )}
-        
-        {/* Show troubleshooting tips for common errors */}
-        {message.includes('music') && (
+
+        {/* Troubleshooting tips */}
+        {normalizedMessage.includes('music') && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" component="div" fontWeight="bold">
+            <Typography
+              variant="caption"
+              component="div"
+              fontWeight="bold"
+            >
               Tips for Music Issues:
             </Typography>
-            <ul style={{ margin: '4px 0', paddingLeft: '20px', fontSize: '0.9em' }}>
-              <li>Ensure music ID is from TikTok's official music library</li>
-              <li>Check if the music is available for advertising use</li>
+            <ul style={{ margin: '4px 0', paddingLeft: 20, fontSize: '0.9em' }}>
+              <li>Use music from TikTok’s official commercial music library</li>
+              <li>Ensure the track is approved for advertising use</li>
               <li>Try a different music ID or upload custom music</li>
             </ul>
           </Box>
